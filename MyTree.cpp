@@ -1,6 +1,7 @@
 ﻿#include <iostream>
 #include<string>
 #include<vector>
+#include <cmath>
 using namespace std;
 
 template<typename T>
@@ -24,6 +25,7 @@ class WorldTree
 		void dispel(T knowledge);//+
 		void regrow(string key);//+
 		void regrow(T knowledge);//+
+		
 
 	private:
 		void dispel(string rootkey, string key,vector<T>& v);//+
@@ -47,6 +49,61 @@ class WorldTree
 		};
 		int Capacity;
 		Wisp<T>* ROOT;
+		void get_vector(vector<Wisp<T>*>& v, Wisp<T>* wisp,int level)
+		{
+			
+			if (wisp != nullptr)
+			{
+					get_vector(v, wisp->left_branch, level - 1);
+					if (level == 1)
+						v.push_back(wisp);
+					get_vector(v,wisp->right_branch,level -1);
+			}
+		}
+	public:
+		Wisp<T>* get_root()
+		{
+			return this->ROOT;
+		}
+		void print(unsigned int level=1)
+		{
+			if (this->Capacity == 0)
+			{
+				cout << "Couldn`t write an empty tree" << endl;
+				abort();
+			}
+			else
+			{
+				vector<Wisp<T>*> v;
+				Wisp<T>* nullwisp = new Wisp<T>("NULL", 0);
+				int real_level = 0;
+				for(int i=1;i<=level;i++)
+				{
+					get_vector(v, ROOT, i);
+					if(v[v.size()-1]!=nullwisp)
+					{
+						v.push_back(nullwisp);
+						real_level++;
+					}
+				}
+				for (int i = 0; i < v.size(); i++)
+				{
+					if (v[i]->key != "NULL")
+					{
+						for (int a = pow(2, real_level - 1);a>0;a--)
+							cout << "\t";
+							cout << v[i]->knowledge;
+						for (int a = pow(2, real_level - 1); a > 0; a--)
+							cout << "\t";
+					}
+					else
+					{
+						real_level--;
+						cout << endl;
+					}
+				}
+			}
+		}
 };
 
 template<typename T>
@@ -366,20 +423,19 @@ void WorldTree<T>::regrow(T knowledge)
 	}
 }
 
+
 int main()
 {
-	int com;
-	cin >> com;
-	while (1) {
-		WorldTree<int> tree;
-		cout << "1\n";
-		tree.grow(123);
-		tree.grow(124);
-		tree.grow(120);
-		tree.grow(111);
-		tree.grow(122);
-		tree.regrow(120);
-	}
+	WorldTree<int> tree;
+	tree.grow(10);
+	tree.grow(5);
+	tree.grow(20);
+	tree.grow(1);
+	tree.grow(6);
+	tree.grow(15);
+	tree.grow(21);
 
+	tree.print(4111);
+	
 	return 0;
 }
