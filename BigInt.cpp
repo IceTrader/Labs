@@ -332,10 +332,10 @@ public:
 			BigInt i(false, "0");
 			for(;obj1>i;obj1=obj1-obj2)
 			{
-				++*(result);
+				result->value=result->addition(result->value,"1");
 			}
-			if(obj1 < i)
-				--*(result);
+			if(obj1.value != "0")
+				result->value = result->subtraction(result->value, "1");
 		return *result;
 	}
 
@@ -347,5 +347,9 @@ private:
 
 int main()
 {
+	BigInt a;
+	BigInt b;
+	cin >> a >> b;
+	cout << a + b << endl << a - b << endl << a * b << endl << a / b << endl << a << endl << b;
 	return 0;
 }
