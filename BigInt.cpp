@@ -315,6 +315,8 @@ public:
 			for (BigInt i(false, "1"); i < obj1; i++)
 				*result = *result + obj2;
 		}
+		if (result->value == "0")
+			result->sign = false;
 		return *result;
 	}
 
@@ -327,20 +329,22 @@ public:
 			abort();
 		}
 		result->sign = obj1.sign ^ obj2.sign;
-			obj1.sign = false;
-			obj2.sign = false;
-			BigInt i(false, "0");
-			for(;obj1>i;obj1=obj1-obj2)
-			{
-				result->value=result->addition(result->value,"1");
-			}
-			if(obj1.value != "0")
-			{
-				bool sign = result->sign;
-				result->sign = false;
-				--*(result);
-				result->sign = sign;
-			}
+		obj1.sign = false;
+		obj2.sign = false;
+		BigInt i(false, "0");
+		for(;obj1>i;obj1=obj1-obj2)
+		{
+			result->value=result->addition(result->value,"1");
+		}
+		if(obj1.value != "0")
+		{
+			bool sign = result->sign;
+			result->sign = false;
+			--*(result);
+			result->sign = sign;
+		}
+		if (result->value == "0")
+			result->sign = false;
 		return *result;
 	}
 
