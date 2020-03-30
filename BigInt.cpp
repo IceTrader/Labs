@@ -335,7 +335,12 @@ public:
 				result->value=result->addition(result->value,"1");
 			}
 			if(obj1.value != "0")
-				result->value = result->subtraction(result->value, "1");
+			{
+				bool sign = result->sign;
+				result->sign = false;
+				--*(result);
+				result->sign = sign;
+			}
 		return *result;
 	}
 
@@ -350,6 +355,10 @@ int main()
 	BigInt a;
 	BigInt b;
 	cin >> a >> b;
-	cout << a + b << endl << a - b << endl << a * b << endl << a / b << endl << a << endl << b;
+	cout << a + b << endl;
+	cout << a - b << endl;
+	cout << a * b << endl;
+	cout << a / b << endl;
+	cout << a << endl << b;
 	return 0;
 }
