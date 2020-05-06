@@ -25,22 +25,41 @@ public:
 	virtual void alph_gen()
 	{
 		string alphabet;
-		cout << "Write string of symbols that your text uses\n";
-		cin.get();
-		getline(cin, alphabet);
+		while (true)
+		{
+			cout << "Write string of symbols that your text uses\n";
+			cin.get();
+			getline(cin, alphabet);
+			if (!cin.good())
+			{
+				cin.clear();
+				cin.ignore(10000, '\n');
+				cout << "Invalid symbols found.Try to input correct symbols!\n";
+			}
+			else
+				break;
+		}
 		try
 		{
 			json j;
 			j["TYPE"] = this->type;
 			j["ALPH"] = alphabet;
-			cout << "Input path and name to new alphabet\n";
-			cin >> alphabet;//use free variable
 			ofstream out;
-			out.open(alphabet + ".alph");
-			if (!out.is_open())
+			while(1)
 			{
-				cout << "Couldn`t open the file\n";
-				abort();
+				cout << "Input path and name to new alphabet\n";
+				cin >> alphabet;//use free variable
+				if (!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
+				}
+				out.open(alphabet + ".alph");
+				if (out.is_open())
+					break;
+				cout << "Couldn`t open the file.Try to input another path and name\n";
 			}
 			out << j;
 			out.close();
@@ -83,34 +102,44 @@ protected:
 		json j;
 		fstream in;
 		string path;
-		try
+		while (true)
 		{
-			cout << "Input path to " + elem << endl;
-			cin >> path;
-			if (path.substr(path.find_last_of('.')) != "." + exe)
+			try
 			{
-				cout << "Wrong file\n";
-				abort();
+				cout << "Input path to " + elem << endl;
+				cin >> path;
+				if(!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
+				}
+				if (path.substr(path.find_last_of('.')) != "." + exe)
+				{
+					cout << "Wrong file\n";
+					continue;
+				}
+				in.open(path);
+				if (!in.is_open())
+				{
+					cout << "Couldn`t open the file\n";
+					continue;
+				}
+				in >> j;
+				if (j["TYPE"].get<string>() != this->type)
+				{
+					cout << "Incorrect type of " + elem << endl;
+					continue;
+				}
+				in.close();
+				return j[elem].get<T>();
 			}
-			in.open(path);
-			if (!in.is_open())
+			catch (exception e)
 			{
-				cout << "Couldn`t open the file\n";
-				abort();
+				cout << "\nInvalid " + elem << endl;
+				continue;
 			}
-			in >> j;
-			if (j["TYPE"].get<string>() != this->type)
-			{
-				cout << "Incorrect type of " + elem << endl;
-				abort();
-			}
-			in.close();
-			return j[elem].get<T>();
-		}
-		catch (exception e)
-		{
-			cout << "\nInvalid " + elem << endl;
-			abort();
 		}
 	}
 };
@@ -137,145 +166,202 @@ public:
 			key.erase(key.begin() + iter);
 			key.insert(key.begin() + rand() % columns, elem);
 		}
-		try
+		while (true)
 		{
-			string path;
-			ofstream out;
-			json j;
-			j["TYPE"] = this->type;
-			j["KEY"] = key;
-			cout << "Input path and name to new key\n";
-			cin >> path;//use free variable
-			out.open(path + ".key");
-			if (!out.is_open())
+			try
 			{
-				cout << "Couldn`t open the file\n";
-				abort();
+				string path;
+				ofstream out;
+				json j;
+				j["TYPE"] = this->type;
+				j["KEY"] = key;
+				cout << "Input path and name to new key\n";
+				cin >> path;//use free variable
+				if (!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
+				}
+				out.open(path + ".key");
+				if (!out.is_open())
+				{
+					cout << "Couldn`t open the file\n";
+					continue;
+				}
+				out << j;
+				out.close();
+				cout << "Done\n";
 			}
-			out << j;
-			out.close();
-			cout << "Done\n";
-		}
-		catch (exception e)
-		{
-			cout << "Something went wrong\n";
-			abort();
+			catch (exception e)
+			{
+				cout << "Something went wrong\n";
+				continue;
+			}
 		}
 	}
 
 	void encrypt()override//+
 	{
-		Alph_Key<vector<int>> pair(finder<string>("alph", "ALPH"), finder<vector<int>>("key","KEY"));
-		fstream stream;
-		string path,text;
-		vector<vector<char>>table;
-		try
+		bool good;
+		while (true)
 		{
-			cout << "Input path and name of text\n";
-			cin >> path;
-			stream.open(path, ios::in);
-			if (!stream.is_open())
+			good = true;
+			Alph_Key<vector<int>> pair(finder<string>("alph", "ALPH"), finder<vector<int>>("key","KEY"));
+			fstream stream;
+			string path,text;
+			vector<vector<char>>table;
+			try
 			{
-				cout << "Couldn`t open the file\n";
-				abort();
-			}
-			vector<char>boof;
-			while (!stream.eof())
-			{
-				getline(stream, path);//use path as variable again
-				for(int i=0;i<path.size();i++)
+				cout << "Input path and name of text\n";
+				cin >> path;
+				if (!cin.good())
 				{
-					if (pair.KEY.size() != boof.size())
-					{
-						boof.push_back(path[i]);
-						if (pair.ALPH.find(path[i]) == -1)
-						{
-							cout << "Wrong alphabet\n";
-							abort();
-						}
-					}
-					else
-					{
-						table.push_back(boof);
-						boof.clear();
-						boof.push_back(path[i]);
-					}
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
 				}
+				stream.open(path, ios::in);
+				if (!stream.is_open())
+				{
+					cout << "Couldn`t open the file\n";
+					continue;
+				}
+				vector<char>boof;
+				while (!stream.eof())
+				{
+					getline(stream, path);//use path as variable again
+					for (int i = 0; i < path.size(); i++)
+					{
+						if (pair.KEY.size() != boof.size())
+						{
+							boof.push_back(path[i]);
+							if (pair.ALPH.find(path[i]) == -1)
+							{
+								cout << "Wrong alphabet\n";
+								good= false;
+							}
+							if (!good)break;
+						}
+						else
+						{
+							table.push_back(boof);
+							boof.clear();
+							boof.push_back(path[i]);
+						}
+						if (!good)break;
+					}
+					if (!good)break;
+				}
+				if (!good)continue;
+				if (boof.size() != 0)
+					table.push_back(boof);
+				for (int i = table[table.size() - 1].size(); i < pair.KEY.size(); i++)
+					table[table.size() - 1].push_back(32);
+				stream.close();
+				for (int i = 0; i < pair.KEY.size(); i++)
+				{
+					for (int j = 0; j < table.size(); j++)
+						text.push_back(table[j][pair.KEY[i]]);
+				}
+				json j;
+				j["TYPE"] = this->type;
+				j["TEXT"] = text;
+				cout << "Input filename to save encrypted text\n";
+				cin >> path;
+				if (!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
+				}
+				stream.open(path + ".txt", ios::out);
+				while(!stream.is_open())
+				{
+					cout << "Couldn`t open the file\n";
+					cout << "Input filename to save encrypted text\n";
+					cin >> path;
+					if (!cin.good())
+					{
+						cin.clear();
+						cin.ignore(10000, '\n');
+						cout << "Invalid symbols found.Try to input correct symbols!\n";
+						continue;
+					}
+					stream.open(path + ".txt", ios::out);
+				}
+				stream << j;
+				stream.close();
+				cout << "Done\n";
 			}
-			if(boof.size()!=0)
-				table.push_back(boof);
-			for (int i = table[table.size() - 1].size(); i < pair.KEY.size(); i++)
-				table[table.size() - 1].push_back(32);
-			stream.close();
-			for (int i = 0; i < pair.KEY.size(); i++)
+			catch (exception e)
 			{
-				for (int j = 0; j < table.size(); j++)
-					text.push_back(table[j][pair.KEY[i]]);
+				cout << "Wrong input data\n";
+				continue;
 			}
-			json j;
-			j["TYPE"] = this->type;
-			j["TEXT"] = text;
-			cout << "Input filename to save encrypted text\n";
-			cin >> path;
-			stream.open(path + ".txt", ios::out);
-			stream << j;
-			stream.close();
-			cout << "Done\n";
-		}
-		catch (exception e)
-		{
-			cout << "Wrong input data\n";
-			abort();
 		}
 	}
 
 	void decrypt()override//+
 	{
-		Alph_Key<vector<int>> pair(finder<string>("alph", "ALPH"), finder<vector<int>>("key","KEY"));
-		Encrypted_text<string> text(this->type,finder<string>("txt","TEXT"));
-		try
+		bool good;
+		while (true)
 		{
-			ofstream out;
-			string decrypted;
-			vector<vector<char>> table(text.text.length() / pair.KEY.size(), vector<char>(pair.KEY.size()));
-			int index = 0;
-			for (int i = 0; i < pair.KEY.size(); i++)
+			good = true;
+			Alph_Key<vector<int>> pair(finder<string>("alph", "ALPH"), finder<vector<int>>("key", "KEY"));
+			Encrypted_text<string> text(this->type, finder<string>("txt", "TEXT"));
+			try
 			{
-				for (int j = 0; j < text.text.length() / pair.KEY.size(); j++)
+				ofstream out;
+				string decrypted;
+				vector<vector<char>> table(text.text.length() / pair.KEY.size(), vector<char>(pair.KEY.size()));
+				int index = 0;
+				for (int i = 0; i < pair.KEY.size(); i++)
 				{
-					if (text.text[index] != ' ' && pair.ALPH.find(text.text[index]) == -1)
+					for (int j = 0; j < text.text.length() / pair.KEY.size(); j++)
 					{
-						cout << "Wrong alphabet\n";
-						abort();
+						if (text.text[index] != ' ' && pair.ALPH.find(text.text[index]) == -1)
+						{
+							cout << "Wrong alphabet\n";
+							good = false;
+						}
+						if (!good)break;
+						table[j][pair.KEY[i]] = text.text[index];
+						index++;
 					}
-					table[j][pair.KEY[i]] = text.text[index];
-					index++;
+					if (!good)break;
 				}
+				if (!good)continue;
+				for (int i = 0; i < table.size(); i++)
+					for (int j = 0; j < table[i].size(); j++)
+						decrypted.push_back(table[i][j]);
+				while (decrypted[decrypted.size() - 1] == ' ')
+				{
+					decrypted.pop_back();
+				}
+				string path;
+				cout << "Input filename to save decrypted text\n";
+				cin >> path;
+				out.open(path + ".txt");
+				while(!out.is_open())
+				{
+					cout << "Couldn`t open or create the file" << endl;
+					cout << "Input filename to save decrypted text\n";
+					cin >> path;
+					out.open(path + ".txt");
+				}
+				out << decrypted;
+				out.close();
+				cout << "Done\n";
 			}
-			for (int i = 0; i < table.size(); i++)
-				for (int j = 0; j < table[i].size(); j++)
-					decrypted.push_back(table[i][j]);
-			while (decrypted[decrypted.size()-1]==' ')
+			catch (exception e)
 			{
-				decrypted.pop_back();
+				cout << "Invalid input\n";
+				continue;
 			}
-			string path;
-			cout << "Input filename to save decrypted text\n";
-			cin >> path;
-			out.open(path + ".txt");
-			if (!out.is_open())
-			{
-				cout << "Couldn`t open or create the file" << endl;
-				abort();
-			}
-			out << decrypted;
-			out.close();
-			cout << "Done\n";
-		}
-		catch (exception e)
-		{
-			cout << "Invalid input\n";
-			abort();
 		}
 	}
 };
@@ -290,41 +376,70 @@ public:
 
 	virtual void key_gen()override//+
 	{
-		unsigned int length;
-		cout << "Input the length of your message\n";
-		cin >> length;
-		vector<int> key;
-		if(length==0)
+		while (true)
 		{
-			cout << "Length couldn`t be 0\n";
-			abort();
-		}
-		srand(time(0));
-		for (int i = 0; i < length; i++)
-			key.push_back(rand() % 128);
-		try
-		{
-			string path;
-			ofstream out;
-			json j;
-			j["TYPE"] = this->type;
-			j["KEY"] = key;
-			cout << "Input path and name to new key\n";
-			cin >> path;
-			out.open(path + ".key");
-			if (!out.is_open())
+			unsigned int length;
+			cout << "Input the length of your message\n";
+			cin >> length;
+			if (!cin.good())
 			{
-				cout << "Couldn`t open the file\n";
-				abort();
+				cin.clear();
+				cin.ignore(10000, '\n');
+				cout << "Invalid symbols found.Try to input correct symbols!\n";
+				continue;
 			}
-			out << j;
-			out.close();
-			cout << "Done\n";
-		}
-		catch (exception e)
-		{
-			cout << "Something went wrong\n";
-			abort();
+			vector<int> key;
+			if (length == 0)
+			{
+				cout << "Length couldn`t be 0\n";
+				continue;
+			}
+			srand(time(0));
+			for (int i = 0; i < length; i++)
+				key.push_back(rand() % 128);
+			while (true)
+			{
+				try
+				{
+					string path;
+					ofstream out;
+					json j;
+					j["TYPE"] = this->type;
+					j["KEY"] = key;
+					cout << "Input path and name to new key\n";
+					cin >> path;
+					if (!cin.good())
+					{
+						cin.clear();
+						cin.ignore(10000, '\n');
+						cout << "Invalid symbols found.Try to input correct symbols!\n";
+						continue;
+					}
+					out.open(path + ".key");
+					while(!out.is_open())
+					{
+						cout << "Couldn`t open the file\n";
+						cout << "Input path and name to new key\n";
+						cin >> path;
+						if (!cin.good())
+						{
+							cin.clear();
+							cin.ignore(10000, '\n');
+							cout << "Invalid symbols found.Try to input correct symbols!\n";
+							continue;
+						}
+						out.open(path + ".key");
+					}
+					out << j;
+					out.close();
+					cout << "Done\n";
+				}
+				catch (exception e)
+				{
+					cout << "Something went wrong\n";
+					continue;
+				}
+			}
 		}
 	}
 
@@ -333,96 +448,163 @@ public:
 		fstream stream;
 		string path;
 		vector<int>_text;
-		Alph_Key<vector<int>> pair(finder<string>("alph", "ALPH"),finder<vector<int>>("key","KEY"));
-		cout << "Input path and name of text\n";
-		cin >> path;
-		try
+		bool good;
+		while (true)
 		{
-			stream.open(path, ios::in);
-			if (!stream.is_open())
+			good = true;
+			Alph_Key<vector<int>> pair(finder<string>("alph", "ALPH"), finder<vector<int>>("key", "KEY"));
+			try
 			{
-				cout << "Couldn`t open the file\n";
-				abort();
-			}
-			while (!stream.eof())
-			{
-				getline(stream, path);//use path as variable again
-				for (int i = 0; i < path.length(); i++)
+				cout << "Input path and name of text\n";
+				cin >> path;
+				if (!cin.good())
 				{
-					if (pair.ALPH.find(path[i]) == -1)
-					{
-						cout << "Wrong alphabet\n";
-						abort();
-					}
-					_text.push_back(path[i]);
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
 				}
+				stream.open(path, ios::in);
+				while(!stream.is_open())
+				{
+					cout << "Couldn`t open the file\n";
+					cout << "Input path and name of text\n";
+					cin >> path;
+					if (!cin.good())
+					{
+						cin.clear();
+						cin.ignore(10000, '\n');
+						cout << "Invalid symbols found.Try to input correct symbols!\n";
+						continue;
+					}
+					stream.open(path, ios::in);
+				}
+				while (!stream.eof())
+				{
+					getline(stream, path);//use path as variable again
+					for (int i = 0; i < path.length(); i++)
+					{
+						if (pair.ALPH.find(path[i]) == -1)
+						{
+							cout << "Wrong alphabet\n";
+							good = false;
+						}
+						if (!good)break;
+						_text.push_back(path[i]);
+					}
+					if (!good)break;
+				}
+				if (!good)continue;
+				stream.close();
+				if (pair.KEY.size() < _text.size())
+				{
+					cout << "Invalid key\n";
+					continue;
+				}
+				path = "";
+				for (int i = 0; i < _text.size(); i++)
+					_text[i] = _text[i] ^ pair.KEY[i];
+				Encrypted_text<vector<int>> text(this->type, _text);
+				json j;
+				j["TYPE"] = text.type;
+				j["TEXT"] = text.text;
+				cout << "Input filename to save encrypted text\n";
+				cin >> path;
+				if (!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
+				}
+				stream.open(path + ".txt", ios::out);
+				while(!stream.is_open())
+				{
+					cout << "Couldn`t open the file\n";
+					cout << "Input filename to save encrypted text\n";
+					cin >> path;
+					if (!cin.good())
+					{
+						cin.clear();
+						cin.ignore(10000, '\n');
+						cout << "Invalid symbols found.Try to input correct symbols!\n";
+						continue;
+					}
+				}
+				stream << j;
+				stream.close();
+				cout << "Done\n";
 			}
-			stream.close();
-			if (pair.KEY.size() < _text.size())
+			catch (exception e)
 			{
-				cout << "Invalid key\n";
-				abort();
+				cout << "Wrong pair alph-key\n";
+				continue;
 			}
-			path = "";
-			for (int i = 0; i < _text.size(); i++)
-				_text[i] = _text[i] ^ pair.KEY[i];
-			Encrypted_text<vector<int>> text(this->type, _text);
-			json j;
-			j["TYPE"] = text.type;
-			j["TEXT"] = text.text;
-			cout << "Input filename to save encrypted text\n";
-			cin >> path;
-			stream.open(path + ".txt", ios::out);
-			stream << j;
-			stream.close();
-			cout << "Done\n";
-		}
-		catch (exception e)
-		{
-			cout << "Wrong pair alph-key\n";
-			abort();
 		}
 	}
 
 	virtual void decrypt()override//+
 	{
-		Alph_Key<vector<int>> pair(finder<string>("alph", "ALPH"),finder<vector<int>>("key","KEY"));
-		Encrypted_text<vector<int>> text(this->type, finder<vector<int>>("txt", "TEXT"));
-		try
+		bool good;
+		while (true)
 		{
-			ofstream out;
-			string decrypted;
-			if(pair.KEY.size()<text.text.size())
+			good = true;
+			Alph_Key<vector<int>> pair(finder<string>("alph", "ALPH"), finder<vector<int>>("key", "KEY"));
+			Encrypted_text<vector<int>> text(this->type, finder<vector<int>>("txt", "TEXT"));
+			try
 			{
-				cout << "Invalid key\n";
-				abort();
-			}
-			for (int i = 0; i < text.text.size(); i++)
-			{
-				decrypted.push_back((char)(text.text[i]^pair.KEY[i]));
-				if (pair.ALPH.find(decrypted[i]) == -1)
+				ofstream out;
+				string decrypted;
+				if (pair.KEY.size() < text.text.size())
 				{
-					cout << "Wrong alphabet\n";
-					abort();
+					cout << "Invalid key\n";
+					continue;
 				}
+				for (int i = 0; i < text.text.size(); i++)
+				{
+					decrypted.push_back((char)(text.text[i] ^ pair.KEY[i]));
+					if (pair.ALPH.find(decrypted[i]) == -1)
+					{
+						cout << "Wrong alphabet\n";
+						good = false;
+						break;
+					}
+				}
+				if (!good)continue;
+				string path;
+				cout << "Input filename to save decrypted text\n";
+				cin >> path;
+				if (!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
+				}
+				out.open(path + ".txt");
+				while(!out.is_open())
+				{
+					cout << "Couldn`t open or create the file" << endl;
+					cout << "Input filename to save decrypted text\n";
+					cin >> path;
+					if (!cin.good())
+					{
+						cin.clear();
+						cin.ignore(10000, '\n');
+						cout << "Invalid symbols found.Try to input correct symbols!\n";
+						continue;
+					}
+					out.open(path + ".txt");
+				}
+				out << decrypted;
+				out.close();
+				cout << "Done\n";
 			}
-			string path;
-			cout << "Input filename to save decrypted text\n";
-			cin >> path;
-			out.open(path + ".txt");
-			if (!out.is_open())
+			catch (exception e)
 			{
-				cout << "Couldn`t open or create the file" << endl;
-				abort();
+				cout << "Invalid input\n";
+				continue;
 			}
-			out << decrypted;
-			out.close();
-			cout << "Done\n";
-		}
-		catch (exception e)
-		{
-			cout << "Invalid input\n";
-			abort();
 		}
 	}
 };
@@ -454,28 +636,47 @@ public:
 			key.erase(iter1, iter2);
 			key.insert(rand() % key.length(), boof);
 		}
-		try
+		while (true)
 		{
-			json j;
-			j["TYPE"] = this->type;
-			j["KEY"] = key;
-			ofstream out;
-			cout << "Input path and name to new key\n";
-			cin >> key;//use free variable
-			out.open(key + ".key");
-			if (!out.is_open())
+			try
 			{
-				cout << "Couldn`t open the file\n";
-				abort();
+				json j;
+				j["TYPE"] = this->type;
+				j["KEY"] = key;
+				ofstream out;
+				cout << "Input path and name to new key\n";
+				cin >> key;//use free variable
+				if (!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
+				}
+				out.open(key + ".key");
+				while(!out.is_open())
+				{
+					cout << "Couldn`t open the file\n";
+					cout << "Input path and name to new key\n";
+					cin >> key;//use free variable
+					if (!cin.good())
+					{
+						cin.clear();
+						cin.ignore(10000, '\n');
+						cout << "Invalid symbols found.Try to input correct symbols!\n";
+						continue;
+					}
+					out.open(key + ".key");
+				}
+				out << j;
+				out.close();
+				cout << "Done\n";
 			}
-			out << j;
-			out.close();
-			cout << "Done\n";
-		}
-		catch (exception e)
-		{
-			cout << "Something went wrong\n";
-			abort();
+			catch (exception e)
+			{
+				cout << "Something went wrong\n";
+				continue;
+			}
 		}
 	}
 
@@ -483,81 +684,140 @@ public:
 	{
 		fstream stream;
 		string path,text;
-		Alph_Key<string> pair(finder<string>("alph", "ALPH"), finder<string>("key", "KEY"));
-		cout << "Input path and name of text\n";
-		cin >> path;
-		try
+		while (true)
 		{
-			stream.open(path,ios::in);
-			if(!stream.is_open())
-			{
-				cout << "Couldn`t open the file\n";
-				abort();
+			Alph_Key<string> pair(finder<string>("alph", "ALPH"), finder<string>("key", "KEY"));
+			try
+			{ 
+				cout << "Input path and name of text\n";
+				cin >> path;
+				if (!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
+				}
+				stream.open(path, ios::in);
+				while(!stream.is_open())
+				{
+					cout << "Couldn`t open the file\n";
+					cout << "Input path and name of text\n";
+					cin >> path;
+					if (!cin.good())
+					{
+						cin.clear();
+						cin.ignore(10000, '\n');
+						cout << "Invalid symbols found.Try to input correct symbols!\n";
+						continue;
+					}
+					stream.open(path, ios::in);
+				}
+				while (!stream.eof())
+				{
+					getline(stream, path);//use path as variable again
+					text = text + path;
+				}
+				stream.close();
+				path = "";
+				for (int i = 0; i < text.length(); i++)
+				{
+					path = path + pair.KEY[pair.ALPH.find(text[i])];
+				}
+				Encrypted_text<string> text(this->type, path);
+				json j;
+				j["TYPE"] = text.type;
+				j["TEXT"] = text.text;
+				cout << "Input filename to save encrypted text\n";
+				cin >> path;
+				if (!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
+				}
+				stream.open(path + ".txt", ios::out);
+				while (!stream.is_open())
+				{
+					cout << "Couldn`t open the file\n";
+					cout << "Input filename to save encrypted text\n";
+					cin >> path;
+					if (!cin.good())
+					{
+						cin.clear();
+						cin.ignore(10000, '\n');
+						cout << "Invalid symbols found.Try to input correct symbols!\n";
+						continue;
+					}
+					stream.open(path + ".txt", ios::out);
+				}
+				stream << j;
+				stream.close();
+				cout << "Done\n";
 			}
-			while (!stream.eof())
+			catch (exception e)
 			{
-				getline(stream,path);//use path as variable again
-				text = text + path;
+				cout << "Wrong pair alph-key\n";
+				continue;
 			}
-			stream.close();
-			path = "";
-			for (int i = 0; i < text.length(); i++)
-			{
-				path = path + pair.KEY[pair.ALPH.find(text[i])];
-			}
-			Encrypted_text<string> text(this->type, path);
-			json j;
-			j["TYPE"] = text.type;
-			j["TEXT"] = text.text;
-			cout << "Input filename to save encrypted text\n";
-			cin >> path;
-			stream.open(path+".txt",ios::out);
-			stream << j;
-			stream.close();
-			cout << "Done\n";
-		}
-		catch (exception e)
-		{
-			cout << "Wrong pair alph-key\n";
-			abort();
 		}
 	}
 
 	void decrypt()override//+
 	{
-		Encrypted_text<string> text(this->type, finder<string>("txt", "TEXT"));
-		Alph_Key<string> pair(finder<string>("alph", "ALPH"), finder<string>("key", "KEY"));
-		if (pair.ALPH.size() != pair.KEY.size())
+		while (true)
 		{
-			cout << "Wrong pair ahabet-key\n";
-			return;
-		}
-		try
-		{
-			ofstream out;
-			exception e;
-			string decrypted;
-			for (int i = 0; i < text.text.length(); i++)
+			Encrypted_text<string> text(this->type, finder<string>("txt", "TEXT"));
+			Alph_Key<string> pair(finder<string>("alph", "ALPH"), finder<string>("key", "KEY"));
+			if (pair.ALPH.size() != pair.KEY.size())
 			{
-				decrypted = decrypted + pair.ALPH[pair.KEY.find(text.text[i])];
+				cout << "Wrong pair ahabet-key\n";
+				continue;
 			}
-			string path;
-			cout << "Input filename to save decrypted text\n";
-			cin >> path;
-			out.open(path + ".txt");
-			if (!out.is_open())
+			try
 			{
-				cout << "Couldn`t open or create the file" << endl;
-				abort();
+				ofstream out;
+				exception e;
+				string decrypted;
+				for (int i = 0; i < text.text.length(); i++)
+				{
+					decrypted = decrypted + pair.ALPH[pair.KEY.find(text.text[i])];
+				}
+				string path;
+				cout << "Input filename to save decrypted text\n";
+				cin >> path;
+				if (!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found.Try to input correct symbols!\n";
+					continue;
+				}
+				out.open(path + ".txt");
+				while(!out.is_open())
+				{
+					cout << "Couldn`t open or create the file" << endl;
+					cout << "Input filename to save decrypted text\n";
+					cin >> path;
+					if (!cin.good())
+					{
+						cin.clear();
+						cin.ignore(10000, '\n');
+						cout << "Invalid symbols found.Try to input correct symbols!\n";
+						continue;
+					}
+					out.open(path + ".txt");
+				}
+				out << decrypted;
+				out.close();
+				cout << "Done\n";
 			}
-			out << decrypted;
-			out.close();
-			cout << "Done\n";
-		}
-		catch (exception e)
-		{
-			cout << "Invalid input" << endl;
-			abort();
+			catch (exception e)
+			{
+				cout << "Invalid input" << endl;
+				continue;
+			}
 		}
 	}
 };
@@ -569,6 +829,16 @@ void choicer(Encryptor* e_ptr)//+
 	{
 		cout << "What do you want to do?\n1)Generate the alphabet\n2)Generate the key\n3)Encrypt\n4)Decrypt\n5)Go back\n";
 		cin >> choice;
+		if (!cin.good())
+		{
+			if (!cin.good())
+			{
+				cin.clear();
+				cin.ignore(10000, '\n');
+				cout << "Invalid symbols found.Try to input correct symbols!\n";
+				continue;
+			}
+		}
 		switch (choice)
 		{
 			case 1:
@@ -606,6 +876,13 @@ void menu()//+
 		int choice;
 		cout << "Choose the method of encryption\n1)Replacement\n2)Transposition\n3)Gamming\n4)Exit\n";
 		cin >> choice;
+		if (!cin.good())
+		{
+			cin.clear();
+			cin.ignore(10000, '\n');
+			cout << "Invalid symbols found.Try to input correct symbols!\n";
+			continue;
+		}
 		switch (choice)
 		{
 			case 1:
