@@ -193,6 +193,7 @@ public:
 				out << j;
 				out.close();
 				cout << "Done\n";
+				return;
 			}
 			catch (exception e)
 			{
@@ -296,6 +297,7 @@ public:
 				stream << j;
 				stream.close();
 				cout << "Done\n";
+				return;
 			}
 			catch (exception e)
 			{
@@ -356,6 +358,7 @@ public:
 				out << decrypted;
 				out.close();
 				cout << "Done\n";
+				return;
 			}
 			catch (exception e)
 			{
@@ -378,7 +381,7 @@ public:
 	{
 		while (true)
 		{
-			unsigned int length;
+			int length;
 			cout << "Input the length of your message\n";
 			cin >> length;
 			if (!cin.good())
@@ -389,9 +392,9 @@ public:
 				continue;
 			}
 			vector<int> key;
-			if (length == 0)
+			if (!length > 0)
 			{
-				cout << "Length couldn`t be 0\n";
+				cout << "Length couldn`t be less than 1\n";
 				continue;
 			}
 			srand(time(0));
@@ -433,6 +436,7 @@ public:
 					out << j;
 					out.close();
 					cout << "Done\n";
+					return;
 				}
 				catch (exception e)
 				{
@@ -534,6 +538,7 @@ public:
 				stream << j;
 				stream.close();
 				cout << "Done\n";
+				return;
 			}
 			catch (exception e)
 			{
@@ -557,7 +562,7 @@ public:
 				string decrypted;
 				if (pair.KEY.size() < text.text.size())
 				{
-					cout << "Invalid key\n";
+					cout << "Key size must be more than (or equal to) size of your message\n";
 					continue;
 				}
 				for (int i = 0; i < text.text.size(); i++)
@@ -599,6 +604,7 @@ public:
 				out << decrypted;
 				out.close();
 				cout << "Done\n";
+				return;
 			}
 			catch (exception e)
 			{
@@ -671,6 +677,7 @@ public:
 				out << j;
 				out.close();
 				cout << "Done\n";
+				return;
 			}
 			catch (exception e)
 			{
@@ -684,8 +691,10 @@ public:
 	{
 		fstream stream;
 		string path,text;
+		bool good;
 		while (true)
 		{
+			good = true;
 			Alph_Key<string> pair(finder<string>("alph", "ALPH"), finder<string>("key", "KEY"));
 			try
 			{ 
@@ -722,8 +731,15 @@ public:
 				path = "";
 				for (int i = 0; i < text.length(); i++)
 				{
+					if(pair.ALPH.find(text[i])==-1)
+					{
+						good = false;
+						cout << "Invalid symbols found!\n";
+						break;
+					}
 					path = path + pair.KEY[pair.ALPH.find(text[i])];
 				}
+				if (!good)continue;
 				Encrypted_text<string> text(this->type, path);
 				json j;
 				j["TYPE"] = text.type;
@@ -755,6 +771,7 @@ public:
 				stream << j;
 				stream.close();
 				cout << "Done\n";
+				return;
 			}
 			catch (exception e)
 			{
@@ -766,8 +783,10 @@ public:
 
 	void decrypt()override//+
 	{
+		bool good;
 		while (true)
 		{
+			good = true;
 			Encrypted_text<string> text(this->type, finder<string>("txt", "TEXT"));
 			Alph_Key<string> pair(finder<string>("alph", "ALPH"), finder<string>("key", "KEY"));
 			if (pair.ALPH.size() != pair.KEY.size())
@@ -782,8 +801,15 @@ public:
 				string decrypted;
 				for (int i = 0; i < text.text.length(); i++)
 				{
+					if(pair.KEY.find(text.text[i])==-1)
+					{
+						good = false;
+						cout << "Invalid symbols found!\n";
+						break;
+					}
 					decrypted = decrypted + pair.ALPH[pair.KEY.find(text.text[i])];
 				}
+				if (!good)continue;
 				string path;
 				cout << "Input filename to save decrypted text\n";
 				cin >> path;
@@ -812,6 +838,7 @@ public:
 				out << decrypted;
 				out.close();
 				cout << "Done\n";
+				return;
 			}
 			catch (exception e)
 			{
