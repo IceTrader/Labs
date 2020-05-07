@@ -153,8 +153,44 @@ public:
 	}
 	void key_gen()override //+
 	{
-		srand(time(0));
-		int columns = rand() % 6 + 5;
+		int columns;
+		char c;
+		while(true)
+		{
+			cout << "Do you want to set number of columns by yourself?(Y/N)\n";
+			cin >> c;
+			if (!cin.good())
+			{
+				cin.clear();
+				cin.ignore(10000, '\n');
+				cout << "Invalid symbols found!\n";
+				continue;
+			}
+			if(c=='Y')
+			{
+				cout << "Input number of columns\n";
+				cin >> columns;
+				if (!cin.good())
+				{
+					cin.clear();
+					cin.ignore(10000, '\n');
+					cout << "Invalid symbols found!\n";
+					continue;
+				}
+				if(columns<1)
+				{
+					cout << "Number of columns couldn`t be less than 1\n";
+					continue;
+				}
+				break;
+			}
+			else
+			{
+				srand(time(0));
+				columns = rand() % 6 + 5;
+				break;
+			}
+		}
 		vector<int> key;
 		for (int i = 0; i < columns; i++)
 			key.push_back(i);
@@ -382,7 +418,7 @@ public:
 		while (true)
 		{
 			int length;
-			cout << "Input the length of your message\n";
+			cout << "Input the length of your key\n";
 			cin >> length;
 			if (!cin.good())
 			{
@@ -500,14 +536,9 @@ public:
 				}
 				if (!good)continue;
 				stream.close();
-				if (pair.KEY.size() < _text.size())
-				{
-					cout << "Invalid key\n";
-					continue;
-				}
 				path = "";
 				for (int i = 0; i < _text.size(); i++)
-					_text[i] = _text[i] ^ pair.KEY[i];
+					_text[i] = _text[i] ^ pair.KEY[i%pair.KEY.size()];
 				Encrypted_text<vector<int>> text(this->type, _text);
 				json j;
 				j["TYPE"] = text.type;
@@ -560,14 +591,9 @@ public:
 			{
 				ofstream out;
 				string decrypted;
-				if (pair.KEY.size() < text.text.size())
-				{
-					cout << "Key size must be more than (or equal to) size of your message\n";
-					continue;
-				}
 				for (int i = 0; i < text.text.size(); i++)
 				{
-					decrypted.push_back((char)(text.text[i] ^ pair.KEY[i]));
+					decrypted.push_back((char)(text.text[i] ^ pair.KEY[i%pair.KEY.size()]));
 					if (pair.ALPH.find(decrypted[i]) == -1)
 					{
 						cout << "Wrong alphabet\n";
