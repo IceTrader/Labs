@@ -1,151 +1,274 @@
-﻿#include <iostream>
-#include<future>
+#include <iostream>
+#include <functional>
 #include<vector>
 #include<mutex>
+#include<string>
+#include<chrono>
+#include<atomic>
 
 using namespace std;
 
 class Thread_Pool
 {
 public:
-	Thread_Pool() 
+	Thread_Pool()//+
 	{
 		this->max_thread_number = 0;
+		this->stopped = false;
 	}
 
-	~Thread_Pool() 
+	~Thread_Pool()
 	{
-		stop();
+		cancel();
 	}
 
-	void set_thread_number(const int& number=0);//+
-
-	void run();//+
-
-	template<class T, class R = result_of_t<T & ()>>
-	future<R> add(T&& t)
+	void add(const function<void()>& task)//+
 	{
-		packaged_task<R()> PT(forward<T>(t));
-		auto result = PT.get_future();
+		lock_guard<mutex>LOCK(this->_vec_mtx);
+		this->tasks.emplace_back(Task(task, this->status[0]));
+	}
+
+	void start(const int& number = 0)//+
+	{
+		if (number < 1)
 		{
-			unique_lock<mutex> LOCK(mtx);
-			pool.emplace_back(move(PT));
+			cout << "Number of threads can`t be less than 1!\n";
+			return;
 		}
-		_cvar.notify_one();
-		return result;
+		set_thread_number(number);
+		for (int i = 0; i <this->max_thread_number; i++)
+		{
+			pool.push_back(thread());
+			free.push_back(atomic<bool>(true));
+		}
+		do
+		{
+			for (int i = 0; i <this->max_thread_number; i++)
+			{
+				if (this->free[i] && this->tasks.size() > 0)
+				{
+					for(int j=0;j<this->tasks.size();j++)
+						if(tasks[j].status == this->status[0])
+						{
+							this->free[i] = false;
+							pool[i] = thread([this, i]()
+								{
+									mutex mtx;
+									unique_lock<mutex>LOCK(mtx);
+									for (int j = 0; j < tasks.size(); j++)
+										if (tasks[j].status == this->status[0])
+										{
+											tasks[j].status = this->status[2];
+											LOCK.unlock();
+											tasks[j].task();
+											LOCK.lock();
+											tasks[j].status = this->status[3];
+											free[i] = true;
+											break;
+										}
+								});
+							pool[i].detach();
+							break;
+						}
+				}
+			}
+		} while (!stopped);
+		while (true)
+		{
+			string ch;
+			cout << "Do you want to finish your tasks?(Y/N)\n";
+			cin >> ch;
+			if (ch == "Y")
+			{
+				unique_lock<mutex>LOCK(this->_vec_mtx);
+				for (int i = 0; i < tasks.size(); i++)
+					if (tasks[i].status == status[0]) tasks[i].status = status[1];
+				LOCK.unlock();
+				finish();
+				break;
+			}
+			else if (!cin.good())
+			{
+				cin.clear();
+				cin.ignore(10000, '\n');
+				cout << "Invalid symbols found!\n";
+			}
+			else
+			{
+				cancel();
+				break;
+			}
+		}
 	}
 
-	void cancel();
+	void cancel()//+
+	{
+		lock_guard<mutex>LOCK(this->_vec_mtx);
+		for (int i = 0; i < this->tasks.size(); i++)
+			if (this->tasks[i].status != this->status[3])this->tasks[i].status = this->status[4];
+	}
 
-	void stop();
-	
-	//vector<future<void>>& get_results();
+	void stop()//+
+	{
+		this->stopped = true;
+	}
+
+	vector<string> get_statuses()
+	{
+		vector<string>G;
+		lock_guard<mutex>LOCK(this->_vec_mtx);
+		for (int i = 0; i < this->tasks.size(); i++)
+			G.push_back(this->tasks[i].status);
+		return G;
+	}
 private:
+	struct Task//+
+	{
+		function<void()>task;
+		string status;
+		decltype(thread().get_id()) ID;
+		Task(const function<void()>& task, const string& status)
+		{
+			this->task = task;
+			this->status = status;
+		}
+	};
+	
+	bool stopped;
 
-	mutex mtx;
+	mutex _vec_mtx;
 
-	condition_variable _cvar;
+	vector<Task>tasks;
 
-	vector<future<void>>results;
+	vector<thread> pool;
 
-	vector<packaged_task<void()>>pool;
+	vector<string>status = { "ADDED","FINISHING","THREADED","DONE","CANCELED" };
+
+	vector<bool>free;
 
 	unsigned int max_thread_number;
 
-	void async_task();
-	
+	void set_thread_number(const unsigned int& number = thread::hardware_concurrency());//+
+
+	void finish()
+	{
+		while (this->stopped)
+		{
+			for (int i = 0; i < this->max_thread_number; i++)
+			{
+				if (this->free[i] && this->tasks.size() > 0)
+				{
+					for (int j = 0; j < this->tasks.size(); j++)
+						if (tasks[j].status == this->status[1])
+						{
+							this->free[i] = false;
+							pool[i] = thread([this, i]()
+								{
+									mutex mtx;
+									unique_lock<mutex>LOCK(mtx);
+									for (int j = 0; j < tasks.size(); j++)
+										if (tasks[j].status == this->status[1])
+										{
+											tasks[j].status = this->status[2];
+											LOCK.unlock();
+											tasks[j].task();
+											LOCK.lock();
+											tasks[j].status = this->status[3];
+											free[i] = true;
+											break;
+										}
+									if (!free[i])free[i] = true;
+								});
+							pool[i].detach();
+							break;
+						}	
+				}
+			}
+			this->stopped = false;
+			for (int i = 0; i < this->free.size(); i++)
+				if (!free[i])this->stopped = true;
+		}
+		cout << "Finished\n";
+		cancel();
+	}
 };
 
-void Thread_Pool::set_thread_number(const int& number)
+void Thread_Pool::set_thread_number(const unsigned int& number)//+
 {
-	int a = thread::hardware_concurrency();
-	if (number >= a||number==0)
+	int max = thread::hardware_concurrency();
+	if (number >= max)
 	{
-		cout << "WARNING! ALL " << a << " CPU`S WILL BE USED! DO YOU WANT TO CONTINUE?(Y/N)\n";
-		if (cin.get() == 'Y')
-			this->max_thread_number = a;
+		while (true)
+		{
+			cout << "WARNING! ALL " << max << " CPU`S WILL BE USED! DO YOU WANT TO CONTINUE?(Y/N)\n";
+			if (cin.get() == 'Y')
+			{
+				this->max_thread_number = max;
+				break;
+			}
+			else if (!cin.good())
+			{
+				cin.clear();
+				cin.ignore(10000, '\n');
+				cout << "Invalid symbols found!\n";
+			}
+			else
+			{
+				this->max_thread_number = number;
+				break;
+			}
+		}
 	}
 	else
+	{
 		this->max_thread_number = number;
+	}
 	cout << "SET COMPLETED\n";
 }
 
-void Thread_Pool::run()
+int f1()
 {
-		if (this->max_thread_number == 0)
-		{
-			cout << "THREAD NUMBER IS UNSET!\n";
-			return;
-		}
-		for (int i = 0; i < this->max_thread_number; i++)
-		{
-			this->results.push_back(async(launch::async, [this] { async_task(); }));
-		}
-}
-
-void Thread_Pool::cancel()
-{
-	{
-		unique_lock<mutex> LOCK(mtx);
-		pool.clear();
-	}
-	stop();
-	this->results.clear();
-}
-
-void Thread_Pool::async_task()
-{
-	packaged_task<void()>task;
-	while (true)
-	{
-		packaged_task<void()> function;
-		{
-			unique_lock<mutex> LOCK(mtx);
-			if (pool.empty())
-			{
-				_cvar.wait(LOCK, [&] {return !pool.empty(); });
-			}
-			function = move(pool.front());
-			pool.erase(pool.begin());
-		}
-		if (!function.valid())
-			break;
-		else
-			function();
-	}
-}
-
-void Thread_Pool::stop()
-{
-	{
-		unique_lock<mutex> LOCK(mtx);
-		for (auto&& unused : this->results)
-		{
-			pool.push_back({});
-		}
-	}
-	_cvar.notify_all();
-}
-
-/*vector<future<void>>& Thread_Pool::get_results()
-{
-	return ref(this->results);
-}*/
-
-int f1(int a)
-{
+	//this_thread::sleep_for(chrono::seconds(6));
+	for (int i = 0; i < 1000; i++)
+		cout << 2;
 	cout << "F1\n";
-	return a;
+	return 10;
 }
+
 int f2(int a)
 {
+	//this_thread::sleep_for(chrono::seconds(3));
+	for (int i = 0; i < 1000; i++)
+		cout << 1;
 	cout << " F2\n";
 	return a;
 }
 
+
 int main()
 {
+	int a;
 	Thread_Pool tp;
-	tp.add([]() {return f1(10); });
+	function<void()>ff1 = []() {f1(); };
+	function<void()>ff2 = [&]() {a = f2(10); };
+	tp.add(ff1);
+	tp.add(ff2);
+	tp.add(ff1);
+	tp.add(ff2);
+	tp.add(ff1);
+	tp.add(ff2);
+	thread t(&Thread_Pool::start, &tp,4);
+	tp.add(function<void()>([]() {f1(); }));
+	tp.add(function<void()>([]() {f2(5); }));
+	
+	
+	tp.stop();
+	this_thread::sleep_for(chrono::seconds(12));
+	vector<string>v = tp.get_statuses();
+	t.join();
+	
+	cout << a<<endl;
+	for (auto au : v)
+		cout << au<<endl;
 	return 0;
 }
