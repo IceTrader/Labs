@@ -8,9 +8,23 @@
 
 using namespace std;
 
+struct Task//+
+{
+	function<void()>task;
+	string status;
+	decltype(thread().get_id()) ID;
+	Task(const function<void()>& task, const string& status)
+	{
+		this->task = task;
+		this->status = status;
+	}
+};
+
 class Thread_Pool
 {
 public:
+	const vector<string>status = { "ADDED","FINISHING","THREADED","DONE","CANCELED" };
+
 	Thread_Pool()//+
 	{
 		this->max_thread_number = 0;
@@ -22,13 +36,15 @@ public:
 		cancel();
 	}
 
-	void add(const function<void()>& task)//+
+	const Task& add(const function<void()>& task)//+
 	{
 		lock_guard<mutex>LOCK(this->_vec_mtx);
 		this->tasks.emplace_back(Task(task, this->status[0]));
+		const Task& ref = this->tasks[this->tasks.size() - 1];
+		return ref;
 	}
 
-	void start(const int& number = 0)//+
+	void start(const unsigned int& number = thread::hardware_concurrency())//+
 	{
 		if (number < 1)
 		{
@@ -38,41 +54,30 @@ public:
 		set_thread_number(number);
 		for (int i = 0; i <this->max_thread_number; i++)
 		{
-			pool.push_back(thread());
 			free.push_back(atomic<bool>(true));
-		}
-		do
-		{
-			for (int i = 0; i <this->max_thread_number; i++)
-			{
-				if (this->free[i] && this->tasks.size() > 0)
+			vector<Task>& v_ref = this->tasks;
+			mutex& mtx = this->_vec_mtx;
+			pool.push_back(thread([this,&v_ref,&mtx]() 
 				{
-					for(int j=0;j<this->tasks.size();j++)
-						if(tasks[j].status == this->status[0])
+					while (!stopped)
+					{
+						for (int j = 0; j < v_ref.size(); j++)
 						{
-							this->free[i] = false;
-							pool[i] = thread([this, i]()
-								{
-									mutex mtx;
-									unique_lock<mutex>LOCK(mtx);
-									for (int j = 0; j < tasks.size(); j++)
-										if (tasks[j].status == this->status[0])
-										{
-											tasks[j].status = this->status[2];
-											LOCK.unlock();
-											tasks[j].task();
-											LOCK.lock();
-											tasks[j].status = this->status[3];
-											free[i] = true;
-											break;
-										}
-								});
-							pool[i].detach();
-							break;
+							unique_lock<mutex>LOCK(this->_vec_mtx);
+							if (v_ref[j].status == this->status[0])
+							{
+								v_ref[j].status = this->status[2];
+								LOCK.unlock();
+								v_ref[j].task();
+								LOCK.lock();
+								tasks[j].status = this->status[3];
+							}
 						}
-				}
-			}
-		} while (!stopped);
+					}
+				}));
+		}
+		for (auto& ref : this->pool)
+			ref.join();
 		while (true)
 		{
 			string ch;
@@ -110,6 +115,7 @@ public:
 
 	void stop()//+
 	{
+		lock_guard<mutex>LOCK(this->_vec_mtx);
 		this->stopped = true;
 	}
 
@@ -122,27 +128,14 @@ public:
 		return G;
 	}
 private:
-	struct Task//+
-	{
-		function<void()>task;
-		string status;
-		decltype(thread().get_id()) ID;
-		Task(const function<void()>& task, const string& status)
-		{
-			this->task = task;
-			this->status = status;
-		}
-	};
 	
-	bool stopped;
+	atomic<bool>stopped;
 
 	mutex _vec_mtx;
 
 	vector<Task>tasks;
 
 	vector<thread> pool;
-
-	vector<string>status = { "ADDED","FINISHING","THREADED","DONE","CANCELED" };
 
 	vector<bool>free;
 
@@ -152,42 +145,28 @@ private:
 
 	void finish()
 	{
-		while (this->stopped)
+		for (int i = 0; i < this->max_thread_number; i++)
 		{
-			for (int i = 0; i < this->max_thread_number; i++)
-			{
-				if (this->free[i] && this->tasks.size() > 0)
+			vector<Task>& v_ref = this->tasks;
+			mutex& mtx = this->_vec_mtx;
+			pool[i] = thread([this, &v_ref, &mtx]()
 				{
-					for (int j = 0; j < this->tasks.size(); j++)
-						if (tasks[j].status == this->status[1])
+					for (int j = 0; j < v_ref.size(); j++)
+					{
+						unique_lock<mutex>LOCK(this->_vec_mtx);
+						if (v_ref[j].status == this->status[1])
 						{
-							this->free[i] = false;
-							pool[i] = thread([this, i]()
-								{
-									mutex mtx;
-									unique_lock<mutex>LOCK(mtx);
-									for (int j = 0; j < tasks.size(); j++)
-										if (tasks[j].status == this->status[1])
-										{
-											tasks[j].status = this->status[2];
-											LOCK.unlock();
-											tasks[j].task();
-											LOCK.lock();
-											tasks[j].status = this->status[3];
-											free[i] = true;
-											break;
-										}
-									if (!free[i])free[i] = true;
-								});
-							pool[i].detach();
-							break;
-						}	
-				}
-			}
-			this->stopped = false;
-			for (int i = 0; i < this->free.size(); i++)
-				if (!free[i])this->stopped = true;
+							v_ref[j].status = this->status[2];
+							LOCK.unlock();
+							v_ref[j].task();
+							LOCK.lock();
+							tasks[j].status = this->status[3];
+						}
+					}
+				});
 		}
+		for (auto& ref : this->pool)
+			ref.join();
 		cout << "Finished\n";
 		cancel();
 	}
@@ -250,22 +229,24 @@ int main()
 	int a;
 	Thread_Pool tp;
 	function<void()>ff1 = []() {f1(); };
-	function<void()>ff2 = [&]() {a = f2(10); };
-	tp.add(ff1);
-	tp.add(ff2);
-	tp.add(ff1);
-	tp.add(ff2);
-	tp.add(ff1);
-	tp.add(ff2);
-	thread t(&Thread_Pool::start, &tp,4);
+	function<void()>ff2 = [&]() {a = f2(10); }; 
+	for (int i = 0; i < 10; i++)
+	{
+		tp.add(ff1);
+		tp.add(ff2);
+		tp.add(ff1);
+		tp.add(ff2);
+		tp.add(ff1);
+		tp.add(ff2);
+	}
+	tp.add(function<void()>([&tp]() {tp.stop(); }));
+	//thread t(&Thread_Pool::start, &tp,4);
+	tp.start();
 	tp.add(function<void()>([]() {f1(); }));
 	tp.add(function<void()>([]() {f2(5); }));
-	
-	
-	tp.stop();
-	this_thread::sleep_for(chrono::seconds(12));
+	//tp.stop();
 	vector<string>v = tp.get_statuses();
-	t.join();
+	//t.join();
 	
 	cout << a<<endl;
 	for (auto au : v)
