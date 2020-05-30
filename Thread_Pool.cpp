@@ -54,7 +54,6 @@ public:
 		set_thread_number(number);
 		for (int i = 0; i <this->max_thread_number; i++)
 		{
-			free.push_back(atomic<bool>(true));
 			vector<Task>& v_ref = this->tasks;
 			mutex& mtx = this->_vec_mtx;
 			pool.push_back(thread([this,&v_ref,&mtx]() 
@@ -136,8 +135,6 @@ private:
 	vector<Task>tasks;
 
 	vector<thread> pool;
-
-	vector<bool>free;
 
 	unsigned int max_thread_number;
 
